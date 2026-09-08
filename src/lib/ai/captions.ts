@@ -8,7 +8,7 @@ export async function generateCaption(brief: string) {
     messages: [
       {
         role: "system",
-        content: "Write one short elegant Instagram caption for Punjabi fashion. Add 8-10 hashtags. No extra options."
+        content: "Write one polished Instagram post for a Punjabi fashion brand. Include a short engaging caption, a gentle call to action, the website kesaribyshammirandhawa.com, and 8-10 relevant hashtags. The hashtag #kesaribyshammirandhawa is mandatory. Return only the ready-to-post content."
       },
       {
         role: "user",
@@ -17,5 +17,12 @@ export async function generateCaption(brief: string) {
     ]
   });
 
-  return response.choices[0]?.message.content?.trim() || "Punjabi elegance, softly captured.\n\n#RubaStudio #PunjabiFashion";
+  const generated = response.choices[0]?.message.content?.trim() || "Punjabi elegance, thoughtfully crafted for every celebration.";
+  const withWebsite = generated.includes("kesaribyshammirandhawa.com")
+    ? generated
+    : `${generated}\n\nExplore the collection: kesaribyshammirandhawa.com`;
+
+  return /#kesaribyshammirandhawa\b/i.test(withWebsite)
+    ? withWebsite
+    : `${withWebsite}\n\n#kesaribyshammirandhawa #PunjabiFashion #IndianWear #EthnicWear #TraditionalWear #PunjabiSuits #FashionInspiration #FestiveWear`;
 }

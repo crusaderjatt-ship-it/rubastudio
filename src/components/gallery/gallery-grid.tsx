@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Download, Heart, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, Heart, Instagram, Loader2 } from "lucide-react";
 import { Button } from "@/components/shared/button";
 import type { GeneratedImage } from "@/types/ruba";
 
@@ -17,7 +17,39 @@ export function GalleryGrid({ favoritesOnly = false }: { favoritesOnly?: boolean
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState("");
   const [editStatus, setEditStatus] = useState("");
+  const [instagramContent, setInstagramContent] = useState("");
+  const [isWritingPost, setIsWritingPost] = useState(false);
+  const [postError, setPostError] = useState("");
+  const [copied, setCopied] = useState(false);
   const wordCount = instruction.trim() ? instruction.trim().split(/\s+/).length : 0;
+
+  async function generateInstagramPost() {
+    if (!selectedImage || isWritingPost) return;
+    setIsWritingPost(true);
+    setPostError("");
+    setCopied(false);
+    try {
+      const response = await fetch("/api/caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId: selectedImage.id })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.caption) throw new Error(data.error || "Could not generate Instagram content.");
+      setInstagramContent(data.caption);
+    } catch (error) {
+      setPostError(error instanceof Error ? error.message : "Could not generate Instagram content.");
+    } finally {
+      setIsWritingPost(false);
+    }
+  }
+
+  async function copyInstagramPost() {
+    if (!instagramContent) return;
+    await navigator.clipboard.writeText(instagramContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   async function applyMinorEdit() {
     if (!selectedImage || isEditing || !wordCount || wordCount > 50) return;
@@ -138,6 +170,25 @@ export function GalleryGrid({ favoritesOnly = false }: { favoritesOnly?: boolean
           {editError && <p role="alert" className="text-sm text-maroon">{editError}</p>}
           <p role="status" className="text-sm text-charcoal/70">{editStatus}</p>
         </form>
+        <section className="space-y-3 rounded-lg border border-gold/20 bg-white/82 p-4" aria-labelledby="instagram-post-title">
+          <div>
+            <h2 id="instagram-post-title" className="flex items-center gap-2 text-sm font-bold"><Instagram size={18} /> Instagram post content</h2>
+            <p className="mt-1 text-xs text-charcoal/65">Creates a ready-to-post caption with relevant hashtags and your website link.</p>
+          </div>
+          <Button type="button" variant="secondary" className="w-full" onClick={generateInstagramPost} disabled={isWritingPost}>
+            {isWritingPost ? <Loader2 size={16} className="animate-spin" /> : <Instagram size={16} />}
+            {isWritingPost ? "Writing post..." : instagramContent ? "Generate new version" : "Generate Instagram post"}
+          </Button>
+          {instagramContent ? (
+            <>
+              <textarea aria-label="Instagram post content" value={instagramContent} onChange={(event) => { setInstagramContent(event.target.value); setCopied(false); }} className="min-h-52 w-full rounded-lg border border-gold/30 bg-ivory p-3 text-sm" />
+              <Button type="button" className="w-full" onClick={copyInstagramPost}>
+                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy post content"}
+              </Button>
+            </>
+          ) : null}
+          {postError ? <p role="alert" className="text-sm text-maroon">{postError}</p> : null}
+        </section>
       </section>
     );
   }
@@ -148,7 +199,7 @@ export function GalleryGrid({ favoritesOnly = false }: { favoritesOnly?: boolean
     <div className="grid grid-cols-2 gap-3">
       {images.map((image) => (
         <article key={image.id} className="overflow-hidden rounded-lg border border-gold/20 bg-white shadow-soft">
-          <button type="button" aria-label="Open full image" className="block w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-maroon" onClick={() => { setSelectedImage(image); setInstruction(""); setEditError(""); setEditStatus(""); }}>
+          <button type="button" aria-label="Open full image" className="block w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-maroon" onClick={() => { setSelectedImage(image); setInstruction(""); setEditError(""); setEditStatus(""); setInstagramContent(""); setPostError(""); setCopied(false); }}>
             <Image src={image.thumbnail_url || image.image_url} alt="Ruba Studio generated look" width={260} height={390} className="aspect-[2/3] w-full object-cover" />
           </button>
           <div className="grid grid-cols-2 gap-1 p-2">
